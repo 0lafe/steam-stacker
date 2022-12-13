@@ -10,7 +10,7 @@ const Form = () => {
   return (
     <>
       <p>Please Fill Out All Fields</p>
-      <p>You can find your steam ID <strong><a href='https://steamid.xyz/83112873'>here</a></strong></p>
+      <p>You can find your steam ID <strong><a href='https://steamid.xyz/'>here</a></strong></p>
       <p>You can find steam game IDs <strong><a href='https://steamdb.info/'>here</a></strong></p>
       <p>You can get a steam API key <strong><a href='https://steamcommunity.com/dev/apikey'>here</a></strong></p>
       <br/>
