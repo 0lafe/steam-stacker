@@ -169,7 +169,7 @@ const Consolidator = ({userID, appID, apiKey}) => {
       <br/>
       { dupes && currentItem && (currentItem.length > 0) &&
         <>
-        <p>Working on duplicate item set number {total - dupes.length} of {total}</p>
+        <p>Working on duplicate item set number {total - dupes.length} of {total} (Please don't close this tab until process is finished)</p>
         <p>Working on item number {totalSet - currentItem.length + 1} of {totalSet} within the set</p>
         <p>Estimated Time To Complete All Dupes ~{totalItems}s (Blame steams rate limited API's for this time)</p>
         { currentItem.length && 
