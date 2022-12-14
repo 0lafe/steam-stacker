@@ -55,7 +55,7 @@ const Consolidator = ({userID, appID, apiKey}) => {
     if (currentItem.length > 1) {
       const item = currentItem[currentItem.length - 1]
       if (item[0] !== itemAccumulator) {
-        // await consolidate(item[0], itemAccumulator, item[1])
+        await consolidate(item[0], itemAccumulator, item[1])
       }
       setCurrentItem(currentItem.slice(0, currentItem.length - 1))
     } else if (dupes.length > 0) {
