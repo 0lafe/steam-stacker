@@ -1,24 +1,5 @@
-# README
+# Steam Stacker
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+A tool to stack items in a steam inventory
 
-Things you may want to cover:
-
-* Ruby version
-
-* System dependencies
-
-* Configuration
-
-* Database creation
-
-* Database initialization
-
-* How to run the test suite
-
-* Services (job queues, cache servers, search engines, etc.)
-
-* Deployment instructions
-
-* ...
+Avaliable online here https://lafes-payday-tool.herokuapp.com/
