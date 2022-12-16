@@ -12,13 +12,20 @@ const Consolidator = ({userID, appID, apiKey}) => {
   const [buttonState, setButtonState] = useState(false)
   const [totalSet, setTotalSet] = useState(0)
   const [done, setDone] = useState(false)
+  const [actionType, setActionType] = useState(null)
 
   const fieldsPresent = () => {
     return userID && appID && apiKey
   }
+
   const currentItemAssets = () => {
-    return assets[currentItem[0][2]]
+    if (actionType === 'combine') {
+      return assets[currentItem[0][2]]
+    } else {
+      return assets[currentItem[2]]
+    }
   }
+
   const formatAssets = (array) => {
     const output = {}
     array.forEach((item) => {
@@ -65,6 +72,19 @@ const Consolidator = ({userID, appID, apiKey}) => {
     return dupes
   }
 
+  const obtainStacks = () => {
+    const dupes = items.filter((item) => {
+      return item.amount > 1
+    })
+
+    const formattedDupes = dupes.map((item) => {
+      return [item.assetid, item.amount, `${item.appid}:${item.classid}`]
+    })
+
+    setTotal(formattedDupes.length)
+    return formattedDupes
+  }
+
   const consolidateDupes = async () => {
     if (currentItem.length > 1) {
       const item = currentItem[currentItem.length - 1]
@@ -83,14 +103,45 @@ const Consolidator = ({userID, appID, apiKey}) => {
     }
   }
 
-  useEffect(() => {
-    if (currentItem.length > 0) {
-      window.setTimeout(consolidateDupes, 1000)
+  const unstackItems = async () => {
+    if (currentItem[1] > 1) {
+      if (currentItem[1] > 1) {
+        await unstack(currentItem[0])
+      }
+      const copy = [... currentItem]
+      copy[1] = copy[1] - 1
+      setCurrentItem(copy)
+    } else if (dupes.length > 0) {
+      const items = dupes.pop()
+      setCurrentItem(items)
+      setTotalSet(items[1])
+    } else {
+      setCurrentItem([])
+      setDone(true)
     }
-  }, [currentItem])
+  }
 
+  
   const consolidate = async (fromitemid, destitemid, quantity) => {
     url = `https://api.steampowered.com/IInventoryService/CombineItemStacks/v1/?key=${apiKey}&appid=${appID}&fromitemid=${fromitemid}&destitemid=${destitemid}&quantity=${quantity}&steamid=${userID}`
+    const reply = await fetch(url, {
+      method: 'post',
+      mode: 'no-cors'
+    })
+    
+    if (reply.status === 200 || reply.status === 0) {
+      // const response = await reply.json()
+    } else {
+      console.error('Error stacking items')
+      console.log(reply)
+      return false
+    }
+    return true
+  }
+
+  const unstack = async (itemId) => {
+    url = `https://api.steampowered.com/IInventoryService/SplitItemStack/v1/?key=${apiKey}&appid=${appID}&itemid=${itemId}&quantity=1&steamid=${userID}`
+
     const reply = await fetch(url, {
       method: 'post',
       mode: 'no-cors'
@@ -107,17 +158,39 @@ const Consolidator = ({userID, appID, apiKey}) => {
   }
 
   useEffect(() => {
-    if (items) {
+    if (items && actionType === 'combine') {
       setDupes(obtainDupes())
+    } else if (items && actionType === 'split') {
+      setDupes(obtainStacks())
     }
   }, [items])
 
   useEffect(() => {
     if (dupes) {
-      setTotalItems(dupes.flat().length)
-      consolidateDupes()
+      if (actionType === 'combine') {
+        setTotalItems(dupes.flat().length)
+        consolidateDupes()
+      } else {
+        const initialValue = 0
+        const total = dupes.reduce((accumulator, currentValue) => 
+          accumulator + parseInt(currentValue[1]),
+          initialValue
+        )
+        setTotalItems(total)
+        unstackItems()
+      }
     }
   }, [dupes])
+
+  useEffect(() => {
+    if (currentItem.length > 0) {
+      if (actionType === 'combine') {
+        window.setTimeout(consolidateDupes, 1000)
+      } else {
+        window.setTimeout(unstackItems, 1000)
+      }
+    }
+  }, [currentItem])
 
   const formattedName = () => {
     let color
@@ -135,10 +208,10 @@ const Consolidator = ({userID, appID, apiKey}) => {
       case 'uncommon':
         color = '#8b00ff'
         break
-      case 'epic':
+      case 'rare':
         color = '#eb0ce3'
         break
-      case 'rare':
+      case 'epic':
         color = '#dd222a'
         break
       case 'legendary':
@@ -149,33 +222,55 @@ const Consolidator = ({userID, appID, apiKey}) => {
         break
     }
     return (
-      <>
+      <div style={{width: '100%', border: `2px solid ${color}`, borderRadius: '1rem'}}>
         <p style={{color: color}}>{currentItemAssets().name}</p>
-        <img style={{width: '100%', border: `2px solid ${color}`, borderRadius: '1rem'}} src={"https://community.akamai.steamstatic.com/economy/image/" + currentItemAssets().icon_url_large} />
-      </>
+        <img style={{width: '100%'}} src={"https://community.akamai.steamstatic.com/economy/image/" + currentItemAssets().icon_url_large} />
+      </div>
     )
+  }
+
+  const itemNumber = () => {
+    if (actionType === 'combine') {
+      return totalSet - currentItem.length + 1
+    } else {
+      return totalSet - currentItem[1] + 1
+    }
   }
 
   return (
     <>
       <Button 
         variant="contained"
-        onClick={getInventoryData}
+        onClick={() => {
+          setActionType('combine')
+          getInventoryData()
+        }}
         disabled={buttonState || !fieldsPresent()}
+        style={{margin: '1rem'}}
       >
-        Start  
+        Combine Stacks  
+      </ Button>
+      <Button
+        variant="contained"
+        onClick={() => {
+          setActionType('split')
+          getInventoryData()
+        }}
+        disabled={buttonState || !fieldsPresent()}
+        style={{margin: '1rem'}}
+      >
+        Split Stacks 
       </ Button>
       <br/>
       <br/>
       { dupes && currentItem && (currentItem.length > 0) &&
         <>
-        <p>Working on duplicate item set number {total - dupes.length} of {total} (Please don't close this tab until process is finished)</p>
-        <p>Working on item number {totalSet - currentItem.length + 1} of {totalSet} within the set</p>
-        <p>Estimated Time To Complete All Dupes ~{totalItems}s (Blame steams rate limited API's for this time)</p>
+        <p>Working on {actionType === 'combine' ? 'duplicate' : 'stacked'} item set number {total - dupes.length} of {total} (Please don't close this tab until process is finished)</p>
+        <p>Working on item number {itemNumber()} of {totalSet} within the set</p>
+        <p>Estimated Time To Complete All {actionType === 'combine' ? 'Dupes' : 'Stacks'} ~{totalItems}s (Blame Steam's rate limited API's for this time)</p>
         { currentItem.length && 
           <>
             {formattedName()}
-            
           </>
         }
         </>
