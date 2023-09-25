@@ -1,8 +1,8 @@
 import { Button } from '@mui/material'
 import React, {useState, useEffect} from 'react'
 
-const Consolidator = ({userID, appID, apiKey}) => {
-  const [items, setItems] = useState(null)
+const Consolidator = ({userID, appID, apiKey, filter, filterQuantity}) => {
+  const [inventory, setInventory] = useState(null)
   const [assets, setAssets] = useState(null)
   const [dupes, setDupes] = useState(null)
   const [total, setTotal] = useState(0)
@@ -40,8 +40,9 @@ const Consolidator = ({userID, appID, apiKey}) => {
     const reply = await fetch(url)
     if (reply.status === 200) {
       const response = await reply.json()
-      setItems(response.assets)
-      setAssets(formatAssets(response.descriptions))
+      const tempAssets = formatAssets(response.descriptions)
+      setInventory(filterInventory(response.assets, tempAssets))
+      setAssets(tempAssets)
     } else {
       console.error('Error obtaining inventory information')
       console.log(reply)
@@ -49,11 +50,33 @@ const Consolidator = ({userID, appID, apiKey}) => {
     setButtonState(true)
   }
 
+  const filterInventory = (itemList, names) => {
+    let out = []
+    if (filter && filter.length) {
+      out = itemList.filter((item) => {
+        return names[`${item.appid}:${item.classid}`].name.toUpperCase().includes(filter.toUpperCase())
+      })
+    } else {
+      out = itemList
+    }
+    if (filterQuantity && filterQuantity.length) {
+      const maxQuantity = parseInt(filterQuantity)
+      out = out.map((item) => {
+        if (parseInt(item.amount) > maxQuantity) {
+          return {...item, amount: maxQuantity}
+        } else {
+          return item
+        }
+      })
+    }
+    return out
+  }
+
   const obtainDupes = () => {
     const output = {}
     const dupes = []
 
-    items.forEach((item) => {
+    inventory.forEach((item) => {
       const key = `${item.appid}:${item.classid}:${item.instanceid}`
       if (output[key]) {
         output[key].push([item.assetid, item.amount, `${item.appid}:${item.classid}`])
@@ -73,7 +96,7 @@ const Consolidator = ({userID, appID, apiKey}) => {
   }
 
   const obtainStacks = () => {
-    const dupes = items.filter((item) => {
+    const dupes = inventory.filter((item) => {
       return item.amount > 1
     })
 
@@ -105,9 +128,7 @@ const Consolidator = ({userID, appID, apiKey}) => {
 
   const unstackItems = async () => {
     if (currentItem[1] > 1) {
-      if (currentItem[1] > 1) {
-        await unstack(currentItem[0])
-      }
+      await unstack(currentItem[0])
       const copy = [... currentItem]
       copy[1] = copy[1] - 1
       setCurrentItem(copy)
@@ -121,7 +142,6 @@ const Consolidator = ({userID, appID, apiKey}) => {
     }
   }
 
-  
   const consolidate = async (fromitemid, destitemid, quantity) => {
     url = `https://api.steampowered.com/IInventoryService/CombineItemStacks/v1/?key=${apiKey}&appid=${appID}&fromitemid=${fromitemid}&destitemid=${destitemid}&quantity=${quantity}&steamid=${userID}`
     const reply = await fetch(url, {
@@ -130,13 +150,12 @@ const Consolidator = ({userID, appID, apiKey}) => {
     })
     
     if (reply.status === 200 || reply.status === 0) {
-      // const response = await reply.json()
+      return true
     } else {
       console.error('Error stacking items')
       console.log(reply)
       return false
     }
-    return true
   }
 
   const unstack = async (itemId) => {
@@ -148,22 +167,21 @@ const Consolidator = ({userID, appID, apiKey}) => {
     })
 
     if (reply.status === 200 || reply.status === 0) {
-      // const response = await reply.json()
+      return true
     } else {
       console.error('Error stacking items')
       console.log(reply)
       return false
     }
-    return true
   }
 
   useEffect(() => {
-    if (items && actionType === 'combine') {
+    if (inventory && actionType === 'combine') {
       setDupes(obtainDupes())
-    } else if (items && actionType === 'split') {
+    } else if (inventory && actionType === 'split') {
       setDupes(obtainStacks())
     }
-  }, [items])
+  }, [inventory])
 
   useEffect(() => {
     if (dupes) {

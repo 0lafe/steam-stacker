@@ -10,5 +10,7 @@ class HomesController < ApplicationController
 
         reply = JSON.parse(response.body)
         render json: reply
+
+        # render json: JSON.parse(File.open('test.json').read)
     end
 end
