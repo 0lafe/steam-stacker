@@ -13,6 +13,7 @@ const Consolidator = ({userID, appID, apiKey, filter, filterQuantity}) => {
   const [totalSet, setTotalSet] = useState(0)
   const [done, setDone] = useState(false)
   const [actionType, setActionType] = useState(null)
+  const [statusMessage, setStatusMessage] = useState("")
 
   const fieldsPresent = () => {
     return userID && appID && apiKey
@@ -35,6 +36,8 @@ const Consolidator = ({userID, appID, apiKey, filter, filterQuantity}) => {
   }
 
   const getInventoryData = async () => {
+    setButtonState(true)
+    setStatusMessage("Getting Inventory Data")
     url = `/homes/inventory?userID=${userID}&appID=${appID}`
 
     const reply = await fetch(url)
@@ -43,11 +46,12 @@ const Consolidator = ({userID, appID, apiKey, filter, filterQuantity}) => {
       const tempAssets = formatAssets(response.descriptions)
       setInventory(filterInventory(response.assets, tempAssets))
       setAssets(tempAssets)
+      setStatusMessage("")
     } else {
       console.error('Error obtaining inventory information')
       console.log(reply)
+      setStatusMessage("Something Went Wrong. Let Lafe Know About This")
     }
-    setButtonState(true)
   }
 
   const filterInventory = (itemList, names) => {
@@ -267,7 +271,7 @@ const Consolidator = ({userID, appID, apiKey, filter, filterQuantity}) => {
         style={{margin: '1rem'}}
       >
         Combine Stacks  
-      </ Button>
+      </Button>
       <Button
         variant="contained"
         onClick={() => {
@@ -277,8 +281,11 @@ const Consolidator = ({userID, appID, apiKey, filter, filterQuantity}) => {
         disabled={buttonState || !fieldsPresent()}
         style={{margin: '1rem'}}
       >
-        Split Stacks 
-      </ Button>
+        Split Stacks
+      </Button>
+      <div>
+        { statusMessage }
+      </div>
       <br/>
       <br/>
       { dupes && currentItem && (currentItem.length > 0) &&
